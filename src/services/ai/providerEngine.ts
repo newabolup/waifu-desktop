@@ -1,5 +1,7 @@
 import { AIProviderConfig, StreamChunkCallbacks } from '../../types/provider';
+import { PromptPayloadMessage } from '../../types/conversation';
 import { StreamParser } from './streamParser';
+import { diagnosticLogger } from './diagnosticLogger';
 
 export interface PromptPayloadMessage {
   role: 'system' | 'user' | 'assistant';
@@ -127,6 +129,22 @@ export class ProviderEngine {
         });
 
         callbacks.onComplete(fullContent, fullThoughts.length > 0 ? fullThoughts : undefined);
+
+        diagnosticLogger.addLog({
+          type: 'chat_completion',
+          providerId: currentProvider.id,
+          providerName: currentProvider.name,
+          endpoint,
+          model: currentProvider.model,
+          requestHeaders: { ...headers, Authorization: headers['Authorization'] ? 'Bearer ***' : '' },
+          requestBody: body,
+          status: 200,
+          statusText: 'OK',
+          responseRaw: `[Completed: ${fullContent.length} chars generated]`,
+          latencyMs: 0,
+          success: true,
+          whyAnalysis: diagnosticLogger.analyzeWhy(200),
+        });
       } catch (err: any) {
         clearTimeout(timeoutId);
 
@@ -135,6 +153,27 @@ export class ProviderEngine {
           callbacks.onComplete(fullContent, fullThoughts.length > 0 ? fullThoughts : undefined);
           return;
         }
+
+        diagnosticLogger.addLog({
+          type: 'chat_completion',
+          providerId: currentProvider.id,
+          providerName: currentProvider.name,
+          endpoint,
+          model: currentProvider.model,
+          requestHeaders: { ...headers, Authorization: headers['Authorization'] ? 'Bearer ***' : '' },
+          requestBody: body,
+          status: err.message.match(/\((\d+)\)/) ? parseInt(err.message.match(/\((\d+)\)/)![1]) : 0,
+          statusText: 'Error',
+          responseRaw: err.message,
+          parsedError: err.message,
+          latencyMs: 0,
+          success: false,
+          whyAnalysis: diagnosticLogger.analyzeWhy(
+            err.message.match(/\((\d+)\)/) ? parseInt(err.message.match(/\((\d+)\)/)![1]) : undefined,
+            err.message,
+            body
+          ),
+        });
 
         const shouldRetry =
           attemptNumber < (currentProvider.retryCount ?? 1) &&

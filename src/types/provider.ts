@@ -17,12 +17,32 @@ export interface AIProviderConfig {
   isActive: boolean;
 }
 
+export interface ProviderDiagnosticLog {
+  id: string;
+  timestamp: number;
+  type: 'test_connection' | 'chat_completion' | 'models_probe';
+  providerId: string;
+  providerName: string;
+  endpoint: string;
+  model: string;
+  requestHeaders: Record<string, string>;
+  requestBody: any;
+  status?: number;
+  statusText?: string;
+  responseRaw?: string;
+  parsedError?: string;
+  latencyMs: number;
+  success: boolean;
+  whyAnalysis: string;
+}
+
 export interface ConnectionTestResult {
   success: boolean;
   message: string;
   latencyMs?: number;
   availableModels?: string[];
   streamingSupported?: boolean;
+  diagnosticLog?: ProviderDiagnosticLog;
 }
 
 export interface StreamChunkCallbacks {
