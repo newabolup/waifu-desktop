@@ -34,15 +34,22 @@ export class StorageService {
   }
 
   public async init(): Promise<void> {
+    if (this.db) {
+      this.isInitialized = true;
+      return;
+    }
     if (this.isInitialized) return;
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
       try {
+        console.log('[StorageService] Starting init()...');
         let wasmBinary: Uint8Array | undefined = undefined;
         if (typeof window !== 'undefined' && (window as any).electronAPI?.loadWasmBinary) {
           try {
+            console.log('[StorageService] Requesting loadWasmBinary from IPC...');
             const buf = await (window as any).electronAPI.loadWasmBinary();
+            console.log('[StorageService] loadWasmBinary received:', !!buf, buf ? buf.byteLength || buf.length : 0);
             if (buf) {
               if (buf instanceof Uint8Array) {
                 wasmBinary = buf;
@@ -57,27 +64,31 @@ export class StorageService {
               }
             }
           } catch (e) {
-            console.warn('Could not load wasm binary via electronAPI:', e);
+            console.warn('[StorageService] Could not load wasm binary via electronAPI:', e);
           }
         }
 
         // Fallback fetch if running in browser or wasmBinary wasn't resolved
         if (!wasmBinary && typeof window !== 'undefined' && window.fetch) {
           try {
+            console.log('[StorageService] Trying fetch fallback for sql-wasm.wasm...');
             const res = await fetch('./sql-wasm.wasm');
+            console.log('[StorageService] fetch res.ok:', res.ok);
             if (res.ok) {
               const arrayBuf = await res.arrayBuffer();
               wasmBinary = new Uint8Array(arrayBuf);
             }
           } catch (fetchErr) {
-            console.warn('Direct fetch for sql-wasm.wasm skipped/failed:', fetchErr);
+            console.warn('[StorageService] Direct fetch for sql-wasm.wasm skipped/failed:', fetchErr);
           }
         }
 
         const sqlOptions: any = {};
         if (wasmBinary && wasmBinary.length > 0) {
+          console.log('[StorageService] Setting sqlOptions.wasmBinary of length:', wasmBinary.length);
           sqlOptions.wasmBinary = wasmBinary;
         } else {
+          console.log('[StorageService] Falling back to locateFile...');
           sqlOptions.locateFile = (file: string) => {
             if (typeof window === 'undefined') {
               return require('path').join(__dirname, '../../../public', file);
@@ -87,10 +98,17 @@ export class StorageService {
         }
 
         try {
+          console.log('[StorageService] Invoking initSqlJs...');
           this.SQL = await initSqlJs(sqlOptions);
+          console.log('[StorageService] initSqlJs succeeded!');
         } catch (sqlInitErr) {
-          console.warn('Initial initSqlJs failed, trying fallback init:', sqlInitErr);
-          this.SQL = await initSqlJs();
+          console.warn('[StorageService] Initial initSqlJs failed, trying fallback init:', sqlInitErr);
+          try {
+            this.SQL = await initSqlJs();
+            console.log('[StorageService] Fallback initSqlJs succeeded!');
+          } catch (retryErr) {
+            console.error('[StorageService] initSqlJs completely failed:', retryErr);
+          }
         }
 
         // Try to load existing database bytes from electronAPI or localStorage
@@ -98,7 +116,9 @@ export class StorageService {
 
         if (typeof window !== 'undefined' && (window as any).electronAPI?.loadDatabase) {
           try {
+            console.log('[StorageService] Loading database via electronAPI...');
             const buf = await (window as any).electronAPI.loadDatabase();
+            console.log('[StorageService] Database loaded from IPC:', !!buf);
             if (buf) {
               if (buf instanceof Uint8Array) {
                 existingData = buf;
@@ -113,7 +133,7 @@ export class StorageService {
               }
             }
           } catch (err) {
-            console.warn('Could not load database from electronAPI, checking fallback:', err);
+            console.warn('[StorageService] Could not load database from electronAPI:', err);
           }
         }
 
@@ -135,16 +155,21 @@ export class StorageService {
         if (this.SQL) {
           if (existingData && existingData.length > 0) {
             try {
+              console.log('[StorageService] Instantiating DB from existing data...');
               this.db = new this.SQL.Database(existingData);
+              this.isInitialized = true;
             } catch (dbErr) {
               console.warn('Could not load existing SQLite data, initializing fresh:', dbErr);
               this.db = new this.SQL.Database();
+              this.isInitialized = true;
               this.db.run(SCHEMA_SQL);
               await this.populateDefaults();
               this.persist();
             }
           } else {
+            console.log('[StorageService] Initializing fresh database with defaults...');
             this.db = new this.SQL.Database();
+            this.isInitialized = true;
             this.db.run(SCHEMA_SQL);
             await this.populateDefaults();
             this.persist();
@@ -158,6 +183,7 @@ export class StorageService {
           }
         }
 
+        console.log('[StorageService] init() successfully completed! DB ready:', !!this.db);
         this.isInitialized = true;
       } catch (err) {
         console.error('Failed to initialize SQLite database:', err);

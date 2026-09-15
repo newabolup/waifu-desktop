@@ -42,23 +42,32 @@ import { VoiceSettings } from './components/voice/VoiceSettings';
 import { DebugPanel } from './components/debug/DebugPanel';
 import { SettingsView } from './components/settings/SettingsView';
 
+const INITIAL_CONVERSATION: ConversationSession = {
+  id: 'conv-init',
+  characterId: DEFAULT_CHARACTER.id,
+  title: 'First Encounter',
+  isPinned: false,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
 export const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
 
-  // Core Data States
-  const [characters, setCharacters] = useState<CharacterProfile[]>([]);
-  const [activeCharacter, setActiveCharacter] = useState<CharacterProfile | null>(null);
-  const [conversations, setConversations] = useState<ConversationSession[]>([]);
-  const [activeConversation, setActiveConversation] = useState<ConversationSession | null>(null);
+  // Core Data States with resilient defaults
+  const [characters, setCharacters] = useState<CharacterProfile[]>([DEFAULT_CHARACTER]);
+  const [activeCharacter, setActiveCharacter] = useState<CharacterProfile>(DEFAULT_CHARACTER);
+  const [conversations, setConversations] = useState<ConversationSession[]>([INITIAL_CONVERSATION]);
+  const [activeConversation, setActiveConversation] = useState<ConversationSession>(INITIAL_CONVERSATION);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [memories, setMemories] = useState<MemoryItem[]>([]);
-  const [emotionalState, setEmotionalState] = useState<EmotionalState | null>(null);
-  const [relationship, setRelationship] = useState<RelationshipProgress | null>(null);
-  const [providers, setProviders] = useState<AIProviderConfig[]>([]);
-  const [activeProviderId, setActiveProviderId] = useState<string>('');
-  const [proactiveRules, setProactiveRules] = useState<ProactiveRule[]>([]);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [emotionalState, setEmotionalState] = useState<EmotionalState>(DEFAULT_EMOTIONS);
+  const [relationship, setRelationship] = useState<RelationshipProgress>(DEFAULT_RELATIONSHIP);
+  const [providers, setProviders] = useState<AIProviderConfig[]>(DEFAULT_PROVIDERS);
+  const [activeProviderId, setActiveProviderId] = useState<string>(DEFAULT_PROVIDERS[0]?.id || 'prov-local');
+  const [proactiveRules, setProactiveRules] = useState<ProactiveRule[]>(DEFAULT_PROACTIVE_RULES);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [ttsConfig, setTtsConfig] = useState<TTSConfig>(DEFAULT_TTS_CONFIG);
 
   // Live Chat Generation States
@@ -178,6 +187,7 @@ export const App: React.FC = () => {
       setProactiveRules(DEFAULT_PROACTIVE_RULES);
       setSettings(DEFAULT_APP_SETTINGS);
     } finally {
+      console.log('[App] loadAllData completed, setting isLoaded = true');
       setIsLoaded(true);
     }
   };
@@ -185,21 +195,11 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadAllData();
 
-    // Safety watchdog: ensure splash screen NEVER stays longer than 2 seconds
+    // Safety watchdog: guarantee UI displays within 800ms
     const watchdog = setTimeout(() => {
-      setIsLoaded((loaded) => {
-        if (!loaded) {
-          console.warn('Watchdog triggered: dismissing splash screen');
-          setActiveCharacter((c) => c || DEFAULT_CHARACTER);
-          setSettings((s) => s || DEFAULT_APP_SETTINGS);
-          setEmotionalState((e) => e || DEFAULT_EMOTIONS);
-          setRelationship((r) => r || DEFAULT_RELATIONSHIP);
-          setProviders((p) => (p.length ? p : DEFAULT_PROVIDERS));
-          return true;
-        }
-        return loaded;
-      });
-    }, 2000);
+      console.log('[App] Watchdog fired: ensuring isLoaded = true');
+      setIsLoaded(true);
+    }, 800);
 
     // Start proactive messaging scheduler
     proactiveScheduler.start(60);
@@ -541,7 +541,7 @@ export const App: React.FC = () => {
     setMessages([]);
   };
 
-  if (!isLoaded || !activeCharacter || !activeConversation || !emotionalState || !relationship || !settings) {
+  if (!isLoaded) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0a0b12] text-white">
         <div className="w-12 h-12 rounded-full border-2 border-sakura-500 border-t-transparent animate-spin mb-4" />

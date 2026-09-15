@@ -26,6 +26,14 @@ function createWindow() {
     mainWindow?.show();
   });
 
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    console.log(`[Renderer Console] [lvl ${level}] ${message} (${sourceId}:${line})`);
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[Renderer Fail Load] ${errorCode} - ${errorDescription} at ${validatedURL}`);
+  });
+
   const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
