@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-main: #0b0d14;
+    --bg-card: rgba(18, 21, 33, 0.75);
+    --bg-card-hover: rgba(26, 31, 48, 0.85);
+    --border-color: rgba(244, 63, 117, 0.2);
+    --accent: #f43f75;
+    --accent-glow: rgba(244, 63, 117, 0.4);
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  /* Theme: Dark Sakura */
+  .theme-dark-sakura {
+    --bg-main: #0c0d16;
+    --bg-card: rgba(21, 23, 38, 0.8);
+    --bg-card-hover: rgba(30, 34, 56, 0.9);
+    --border-color: rgba(244, 63, 117, 0.25);
+    --accent: #f43f75;
+    --accent-glow: rgba(244, 63, 117, 0.4);
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  /* Theme: Midnight Neon */
+  .theme-midnight-neon {
+    --bg-main: #06080e;
+    --bg-card: rgba(13, 18, 32, 0.8);
+    --bg-card-hover: rgba(19, 27, 48, 0.9);
+    --border-color: rgba(0, 240, 255, 0.25);
+    --accent: #00f0ff;
+    --accent-glow: rgba(0, 240, 255, 0.4);
+    --text-primary: #f0fdfa;
+    --text-muted: #7dd3fc;
+  }
+
+  /* Theme: Cyber Dream */
+  .theme-cyber-dream {
+    --bg-main: #0d0718;
+    --bg-card: rgba(27, 16, 48, 0.8);
+    --bg-card-hover: rgba(39, 24, 68, 0.9);
+    --border-color: rgba(176, 38, 255, 0.3);
+    --accent: #b026ff;
+    --accent-glow: rgba(176, 38, 255, 0.45);
+    --text-primary: #faf5ff;
+    --text-muted: #c084fc;
+  }
+
+  /* Theme: Light Velvet */
+  .theme-light-velvet {
+    --bg-main: #faf5f7;
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-hover: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(244, 63, 117, 0.2);
+    --accent: #e11d58;
+    --accent-glow: rgba(244, 63, 117, 0.25);
+    --text-primary: #1e293b;
+    --text-muted: #64748b;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 63, 117, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 63, 117, 0.6);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+}
+
+.glass-panel-interactive {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-panel-interactive:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Markdown prose styling */
+.markdown-body {
+  line-height: 1.65;
+}
+
+.markdown-body p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body pre {
+  background: rgba(10, 12, 20, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+}
+
+.markdown-body :not(pre) > code {
+  background: rgba(244, 63, 117, 0.15);
+  color: #ff7fa3;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+  font-style: italic;
+  color: #cbd5e1;
+  margin: 0.5rem 0;
+}
+
+/* Titlebar drag region */
+.titlebar-drag-region {
+  -webkit-app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}

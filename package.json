@@ -1,0 +1,58 @@
+{
+  "name": "waifu-desktop",
+  "version": "1.0.0",
+  "description": "Production-ready desktop AI Anime Waifu Companion for PC with persistent memory, emotional state, relationship progression, and custom endpoints",
+  "main": "dist-electron/main.js",
+  "author": "newabolup",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newabolup/waifu-desktop.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build:react": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "npm run build:react && npm run build:electron",
+    "app": "electron .",
+    "start": "vite & electron .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "eventsource-parser": "^3.0.0",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^1.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.0.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "sql.js": "^1.12.0",
+    "tailwind-merge": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^22.13.9",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@types/sql.js": "^1.4.9",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7"
+  },
+  "allowScripts": {
+    "electron@35.7.5": true,
+    "esbuild@0.25.12": true
+  }
+}
