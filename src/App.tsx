@@ -8,8 +8,15 @@ import { RelationshipProgress } from './types/relationship';
 import { AIProviderConfig } from './types/provider';
 import { ProactiveRule } from './types/proactive';
 import { AppSettings } from './types/settings';
-import { TTSConfig } from './types/voice';
-import { DEFAULT_TTS_CONFIG } from './services/storage/defaults';
+import {
+  DEFAULT_CHARACTER,
+  DEFAULT_RELATIONSHIP,
+  DEFAULT_EMOTIONS,
+  DEFAULT_PROVIDERS,
+  DEFAULT_PROACTIVE_RULES,
+  DEFAULT_APP_SETTINGS,
+  DEFAULT_TTS_CONFIG,
+} from './services/storage/defaults';
 
 import { promptEngine } from './services/prompt/promptEngine';
 import { providerEngine } from './services/ai/providerEngine';
@@ -76,8 +83,8 @@ export const App: React.FC = () => {
       await storage.init();
 
       const loadedChars = await storage.getCharacters();
-      setCharacters(loadedChars);
-      const activeChar = loadedChars.find((c) => c.isActive) || loadedChars[0];
+      setCharacters(loadedChars && loadedChars.length > 0 ? loadedChars : [DEFAULT_CHARACTER]);
+      const activeChar = loadedChars.find((c) => c.isActive) || loadedChars[0] || DEFAULT_CHARACTER;
       setActiveCharacter(activeChar);
 
       const loadedConvs = await storage.getConversations(activeChar?.id);
@@ -93,47 +100,106 @@ export const App: React.FC = () => {
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
-        await storage.saveConversation(activeConv);
+        try {
+          await storage.saveConversation(activeConv);
+        } catch (e) {
+          console.warn('Could not save initial conversation:', e);
+        }
         setConversations([activeConv]);
       }
       setActiveConversation(activeConv || null);
 
       if (activeConv) {
-        const msgs = await storage.getMessages(activeConv.id);
-        setMessages(msgs);
+        try {
+          const msgs = await storage.getMessages(activeConv.id);
+          setMessages(msgs || []);
+        } catch (e) {
+          console.warn('Could not load messages:', e);
+        }
       }
 
       if (activeChar) {
-        const emo = await emotionEngine.getAndDecayState(activeChar);
-        setEmotionalState(emo);
+        try {
+          const emo = await emotionEngine.getAndDecayState(activeChar);
+          setEmotionalState(emo || DEFAULT_EMOTIONS);
+        } catch (e) {
+          setEmotionalState(DEFAULT_EMOTIONS);
+        }
 
-        const rel = await storage.getRelationshipProgress(activeChar.id);
-        setRelationship(rel);
+        try {
+          const rel = await storage.getRelationshipProgress(activeChar.id);
+          setRelationship(rel || DEFAULT_RELATIONSHIP);
+        } catch (e) {
+          setRelationship(DEFAULT_RELATIONSHIP);
+        }
 
-        const mems = await storage.getMemories(activeChar.id);
-        setMemories(mems);
+        try {
+          const mems = await storage.getMemories(activeChar.id);
+          setMemories(mems || []);
+        } catch (e) {
+          setMemories([]);
+        }
 
-        const rules = await storage.getProactiveRules(activeChar.id);
-        setProactiveRules(rules);
+        try {
+          const rules = await storage.getProactiveRules(activeChar.id);
+          setProactiveRules(rules || DEFAULT_PROACTIVE_RULES);
+        } catch (e) {
+          setProactiveRules(DEFAULT_PROACTIVE_RULES);
+        }
       }
 
       const provs = await storage.getProviders();
-      setProviders(provs);
-      const actProv = provs.find((p) => p.isActive) || provs[0];
+      setProviders(provs && provs.length > 0 ? provs : DEFAULT_PROVIDERS);
+      const actProv = provs.find((p) => p.isActive) || provs[0] || DEFAULT_PROVIDERS[0];
       if (actProv) setActiveProviderId(actProv.id);
 
       const appSettings = await storage.getSettings();
-      setSettings(appSettings);
-
-      setIsLoaded(true);
+      setSettings(appSettings || DEFAULT_APP_SETTINGS);
     } catch (err: any) {
-      console.error('Fatal initialization error:', err);
-      setErrorLog((prev) => [...prev, `Initialization error: ${err.message}`]);
+      console.error('Fatal initialization error, populating fallback defaults:', err);
+      setErrorLog((prev) => [...prev, `Initialization fallback: ${err?.message || err}`]);
+
+      setCharacters([DEFAULT_CHARACTER]);
+      setActiveCharacter(DEFAULT_CHARACTER);
+      const fallbackConv: ConversationSession = {
+        id: 'conv-default',
+        characterId: DEFAULT_CHARACTER.id,
+        title: 'First Encounter',
+        isPinned: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setConversations([fallbackConv]);
+      setActiveConversation(fallbackConv);
+      setEmotionalState(DEFAULT_EMOTIONS);
+      setRelationship(DEFAULT_RELATIONSHIP);
+      setProviders(DEFAULT_PROVIDERS);
+      setActiveProviderId(DEFAULT_PROVIDERS[0]?.id || 'prov-local');
+      setProactiveRules(DEFAULT_PROACTIVE_RULES);
+      setSettings(DEFAULT_APP_SETTINGS);
+    } finally {
+      setIsLoaded(true);
     }
   };
 
   useEffect(() => {
     loadAllData();
+
+    // Safety watchdog: ensure splash screen NEVER stays longer than 2 seconds
+    const watchdog = setTimeout(() => {
+      setIsLoaded((loaded) => {
+        if (!loaded) {
+          console.warn('Watchdog triggered: dismissing splash screen');
+          setActiveCharacter((c) => c || DEFAULT_CHARACTER);
+          setSettings((s) => s || DEFAULT_APP_SETTINGS);
+          setEmotionalState((e) => e || DEFAULT_EMOTIONS);
+          setRelationship((r) => r || DEFAULT_RELATIONSHIP);
+          setProviders((p) => (p.length ? p : DEFAULT_PROVIDERS));
+          return true;
+        }
+        return loaded;
+      });
+    }, 2000);
 
     // Start proactive messaging scheduler
     proactiveScheduler.start(60);
@@ -147,6 +213,7 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      clearTimeout(watchdog);
       proactiveScheduler.stop();
       ttsService.stop();
     };

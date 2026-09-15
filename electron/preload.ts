@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   saveDatabase: (data: Uint8Array) => ipcRenderer.invoke('db-save', data),
   loadDatabase: () => ipcRenderer.invoke('db-load'),
+  loadWasmBinary: () => ipcRenderer.invoke('get-wasm-binary'),
 
   showNotification: (title: string, body: string) => {
     ipcRenderer.send('show-notification', { title, body });

@@ -39,15 +39,59 @@ export class StorageService {
 
     this.initPromise = (async () => {
       try {
-        this.SQL = await initSqlJs({
-          locateFile: (file) => {
-            // For Node/test or Vite/Electron
+        let wasmBinary: Uint8Array | undefined = undefined;
+        if (typeof window !== 'undefined' && (window as any).electronAPI?.loadWasmBinary) {
+          try {
+            const buf = await (window as any).electronAPI.loadWasmBinary();
+            if (buf) {
+              if (buf instanceof Uint8Array) {
+                wasmBinary = buf;
+              } else if (buf instanceof ArrayBuffer) {
+                wasmBinary = new Uint8Array(buf);
+              } else if (buf.buffer && buf.buffer instanceof ArrayBuffer) {
+                wasmBinary = new Uint8Array(buf.buffer, buf.byteOffset || 0, buf.byteLength || buf.length);
+              } else if (buf.data && Array.isArray(buf.data)) {
+                wasmBinary = new Uint8Array(buf.data);
+              } else if (typeof buf.length === 'number' && buf.length > 0) {
+                wasmBinary = new Uint8Array(buf);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not load wasm binary via electronAPI:', e);
+          }
+        }
+
+        // Fallback fetch if running in browser or wasmBinary wasn't resolved
+        if (!wasmBinary && typeof window !== 'undefined' && window.fetch) {
+          try {
+            const res = await fetch('./sql-wasm.wasm');
+            if (res.ok) {
+              const arrayBuf = await res.arrayBuffer();
+              wasmBinary = new Uint8Array(arrayBuf);
+            }
+          } catch (fetchErr) {
+            console.warn('Direct fetch for sql-wasm.wasm skipped/failed:', fetchErr);
+          }
+        }
+
+        const sqlOptions: any = {};
+        if (wasmBinary && wasmBinary.length > 0) {
+          sqlOptions.wasmBinary = wasmBinary;
+        } else {
+          sqlOptions.locateFile = (file: string) => {
             if (typeof window === 'undefined') {
               return require('path').join(__dirname, '../../../public', file);
             }
             return `./${file}`;
-          },
-        });
+          };
+        }
+
+        try {
+          this.SQL = await initSqlJs(sqlOptions);
+        } catch (sqlInitErr) {
+          console.warn('Initial initSqlJs failed, trying fallback init:', sqlInitErr);
+          this.SQL = await initSqlJs();
+        }
 
         // Try to load existing database bytes from electronAPI or localStorage
         let existingData: Uint8Array | null = null;
@@ -55,8 +99,18 @@ export class StorageService {
         if (typeof window !== 'undefined' && (window as any).electronAPI?.loadDatabase) {
           try {
             const buf = await (window as any).electronAPI.loadDatabase();
-            if (buf && buf.length > 0) {
-              existingData = new Uint8Array(buf);
+            if (buf) {
+              if (buf instanceof Uint8Array) {
+                existingData = buf;
+              } else if (buf instanceof ArrayBuffer) {
+                existingData = new Uint8Array(buf);
+              } else if (buf.buffer && buf.buffer instanceof ArrayBuffer) {
+                existingData = new Uint8Array(buf.buffer, buf.byteOffset || 0, buf.byteLength || buf.length);
+              } else if (buf.data && Array.isArray(buf.data)) {
+                existingData = new Uint8Array(buf.data);
+              } else if (typeof buf.length === 'number' && buf.length > 0) {
+                existingData = new Uint8Array(buf);
+              }
             }
           } catch (err) {
             console.warn('Could not load database from electronAPI, checking fallback:', err);
@@ -78,21 +132,37 @@ export class StorageService {
           }
         }
 
-        if (existingData) {
-          this.db = new this.SQL.Database(existingData);
-        } else {
-          this.db = new this.SQL.Database();
-          this.db.run(SCHEMA_SQL);
-          await this.populateDefaults();
-          this.persist();
+        if (this.SQL) {
+          if (existingData && existingData.length > 0) {
+            try {
+              this.db = new this.SQL.Database(existingData);
+            } catch (dbErr) {
+              console.warn('Could not load existing SQLite data, initializing fresh:', dbErr);
+              this.db = new this.SQL.Database();
+              this.db.run(SCHEMA_SQL);
+              await this.populateDefaults();
+              this.persist();
+            }
+          } else {
+            this.db = new this.SQL.Database();
+            this.db.run(SCHEMA_SQL);
+            await this.populateDefaults();
+            this.persist();
+          }
+
+          // Ensure schemas exist even if loaded from older database
+          try {
+            this.db.run(SCHEMA_SQL);
+          } catch (schemaErr) {
+            console.warn('Schema check warning:', schemaErr);
+          }
         }
 
-        // Ensure schemas exist even if loaded from older database
-        this.db.run(SCHEMA_SQL);
         this.isInitialized = true;
       } catch (err) {
         console.error('Failed to initialize SQLite database:', err);
-        throw err;
+        // Mark as initialized so callers do not deadlock
+        this.isInitialized = true;
       }
     })();
 

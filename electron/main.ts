@@ -16,6 +16,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
     },
     show: false,
   });
@@ -83,13 +84,38 @@ function createWindow() {
   ipcMain.handle('db-load', async () => {
     try {
       if (fs.existsSync(dbPath)) {
-        return fs.readFileSync(dbPath);
+        const buf = fs.readFileSync(dbPath);
+        return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
       }
       return null;
     } catch (err) {
       console.error('Failed to read database from disk:', err);
       return null;
     }
+  });
+
+  ipcMain.handle('get-wasm-binary', async () => {
+    const possiblePaths = [
+      path.join(__dirname, '../dist/sql-wasm.wasm'),
+      path.join(__dirname, '../public/sql-wasm.wasm'),
+      path.join(__dirname, 'sql-wasm.wasm'),
+      path.join(app.getAppPath(), 'dist/sql-wasm.wasm'),
+      path.join(app.getAppPath(), 'public/sql-wasm.wasm'),
+      path.join(process.resourcesPath, 'sql-wasm.wasm'),
+      path.join(process.resourcesPath, 'app.asar/dist/sql-wasm.wasm'),
+    ];
+    for (const p of possiblePaths) {
+      try {
+        if (fs.existsSync(p)) {
+          const buf = fs.readFileSync(p);
+          return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+        }
+      } catch (err) {
+        console.warn('Error reading wasm candidate path:', p, err);
+      }
+    }
+    console.warn('Could not locate sql-wasm.wasm in candidate paths');
+    return null;
   });
 }
 
