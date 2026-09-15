@@ -324,7 +324,12 @@ export const App: React.FC = () => {
             const latency = Date.now() - startTime;
             setLastLatencyMs(latency);
 
-            if (!fullContent && !fullThoughts) return;
+            if (!fullContent && !fullThoughts) {
+              const warningMsg = `Provider "${currentProvider.name}" returned an empty response (0 tokens). The model identifier "${currentProvider.model}" is unrecognized or inactive on this endpoint. Please open AI Endpoints and click "Fetch Available Models" to select a model (such as ag/gemini-3.7-flash-medium).`;
+              setErrorMessage(warningMsg);
+              setErrorLog((prev) => [...prev, warningMsg]);
+              return;
+            }
 
             // Save assistant message to SQLite
             const assistantMsgId = 'msg-' + Math.random().toString(36).substring(2, 9);

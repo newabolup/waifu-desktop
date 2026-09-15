@@ -77,6 +77,8 @@ export const ProviderSettings: React.FC<ProviderSettingsProps> = ({
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
 
   const selectProvider = (p: AIProviderConfig) => {
     setSelectedProv(p);
@@ -95,6 +97,38 @@ export const ProviderSettings: React.FC<ProviderSettingsProps> = ({
     setFallbackProviderId(p.fallbackProviderId || '');
     setHeadersJson(JSON.stringify(p.customHeaders || {}, null, 2));
     setTestResult(null);
+    setAvailableModels([]);
+  };
+
+  const handleFetchModels = async () => {
+    const cleanBase = baseUrl.trim().replace(/\/+$/, '');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey.trim()) {
+      headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+    }
+
+    setIsFetchingModels(true);
+    try {
+      const res = await fetch(`${cleanBase}/models`, {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.data)) {
+          const list = data.data.map((m: any) => m.id || m.name).filter(Boolean);
+          setAvailableModels(list);
+        }
+      } else {
+        alert(`Failed to fetch models (HTTP ${res.status}): ${await res.text()}`);
+      }
+    } catch (err: any) {
+      alert(`Could not fetch models from ${cleanBase}/models: ${err.message}`);
+    } finally {
+      setIsFetchingModels(false);
+    }
   };
 
   const handleSave = () => {
@@ -152,6 +186,9 @@ export const ProviderSettings: React.FC<ProviderSettingsProps> = ({
 
     const result = await testAIConnection(provToTest);
     setTestResult(result);
+    if (result.availableModels && result.availableModels.length > 0) {
+      setAvailableModels(result.availableModels);
+    }
     setIsTesting(false);
   };
 
@@ -536,14 +573,48 @@ export const ProviderSettings: React.FC<ProviderSettingsProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Model Name / Identifier</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-400">Model Name / Identifier</label>
+                    <button
+                      type="button"
+                      onClick={handleFetchModels}
+                      disabled={isFetchingModels}
+                      className="text-[11px] text-sakura-400 hover:text-sakura-300 flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isFetchingModels ? 'animate-spin' : ''}`} />
+                      Fetch Available Models
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    placeholder="e.g. gpt-4o-mini, llama-3.2, mistral-7b"
+                    placeholder="e.g. ag/gemini-3.7-flash-medium, gpt-4o-mini"
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 font-mono focus:outline-none focus:border-sakura-500/50"
                   />
+                  {availableModels.length > 0 && (
+                    <div className="mt-2 p-2 rounded-xl bg-black/40 border border-slate-800/80">
+                      <div className="text-[10px] text-slate-400 font-semibold mb-1.5 uppercase tracking-wider">
+                        Available on this endpoint ({availableModels.length}):
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                        {availableModels.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setModel(m)}
+                            className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition ${
+                              model === m
+                                ? 'bg-sakura-600 text-white font-bold shadow-sm'
+                                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
