@@ -9,6 +9,7 @@ export interface TTSConfig {
   // Fish Audio configuration
   fishAudioApiKey?: string;
   fishAudioModelId?: string; // reference_id
+  fishAudioModel?: 's2.1-pro-free' | 's2.1-pro' | 's2-pro' | string;
   fishAudioEndpoint?: string; // defaults to https://api.fish.audio/v1/tts
   // OpenAI configuration
   openaiApiKey?: string;
@@ -18,12 +19,13 @@ export interface TTSConfig {
   customHeaders?: Record<string, string>;
 }
 
-export type STTEngineType = 'webspeech' | 'whisper_openai' | 'custom_whisper';
+export type STTEngineType = 'microphone' | 'fish_audio_asr' | 'whisper_openai' | 'webspeech' | 'custom_whisper';
 
 export interface STTConfig {
   engine: STTEngineType;
-  language: string; // 'fa-IR', 'en-US', etc.
+  language: string; // 'fa', 'en', 'auto'
   continuous?: boolean;
+  fishAudioApiKey?: string;
   openaiApiKey?: string;
   customEndpoint?: string;
 }

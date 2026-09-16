@@ -641,8 +641,8 @@ export const App: React.FC = () => {
                   dominantMood={dominantMood}
                   isTalking={isGenerating}
                   isAudioPlaying={Boolean(activeAudioMessageId)}
-                  onUpdateCharacterAssets={async (assets) => {
-                    const updated = { ...activeCharacter, avatarAssets: assets };
+                  onUpdateCharacterAssets={async (partial) => {
+                    const updated = { ...activeCharacter, ...partial };
                     setActiveCharacter(updated);
                     await storage.saveCharacter(updated);
                   }}

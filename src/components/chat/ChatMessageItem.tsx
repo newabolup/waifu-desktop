@@ -101,8 +101,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       <div
         className={`relative max-w-[85%] md:max-w-[78%] rounded-2xl p-4 shadow-lg select-text ${
           isAssistant
-            ? 'bg-[#151828]/90 border border-sakura-500/20 text-slate-100 rounded-tl-sm'
-            : 'bg-gradient-to-br from-sakura-600 to-rose-600 text-white rounded-tr-sm shadow-sakura-900/30'
+            ? 'bg-[#151828]/90 border border-sakura-500/20 text-slate-100 rounded-tl-sm font-vazir'
+            : 'bg-gradient-to-br from-sakura-600 to-rose-600 text-white rounded-tr-sm shadow-sakura-900/30 font-vazir'
         }`}
       >
         {/* Thinking Drawer for reasoning tokens */}
@@ -117,25 +117,25 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               dir="auto"
-              className="w-full min-h-[80px] p-2 rounded-lg bg-black/50 border border-sakura-400 text-sm text-white focus:outline-none"
+              className="w-full min-h-[80px] p-2 rounded-lg bg-black/50 border border-sakura-400 text-sm text-white focus:outline-none font-vazir"
             />
             <div className="flex justify-end gap-2 text-xs">
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-vazir"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-2.5 py-1 rounded bg-sakura-500 text-white font-medium hover:bg-sakura-600"
+                className="px-2.5 py-1 rounded bg-sakura-500 text-white font-medium hover:bg-sakura-600 font-vazir"
               >
                 Save
               </button>
             </div>
           </div>
         ) : (
-          <div className="markdown-body text-sm leading-relaxed overflow-x-auto" dir="auto">
+          <div className={`markdown-body text-sm leading-relaxed overflow-x-auto font-vazir ${isAssistant ? 'assistant-response font-vazir' : ''}`} dir="auto">
             {isAssistant ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -146,18 +146,18 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     const isSingleWord = text.trim().split(/\s+/).length <= 1 && !/[.!؟،,]/.test(text);
 
                     if (isSingleWord) {
-                      return <em className="narration-inline font-medium not-italic">{children}</em>;
+                      return <em className="narration-inline font-medium not-italic font-vazir">{children}</em>;
                     }
 
                     return (
-                      <span className="narration-action block my-2.5 px-3.5 py-2 rounded-xl text-[0.91rem] shadow-sm select-text leading-relaxed">
+                      <span className="narration-action block my-2.5 px-3.5 py-2 rounded-xl text-[0.91rem] shadow-sm select-text leading-relaxed font-vazir">
                         <span className="inline-block text-purple-400 text-xs font-semibold me-2 not-italic select-none">✦</span>
                         {children}
                       </span>
                     );
                   },
                   p: ({ children }) => (
-                    <p className="mb-2 leading-relaxed" dir="auto">
+                    <p className="mb-2 leading-relaxed font-vazir" dir="auto">
                       {children}
                     </p>
                   ),
@@ -166,7 +166,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 {message.content}
               </ReactMarkdown>
             ) : (
-              <p className="whitespace-pre-wrap break-words" dir="auto">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words font-vazir" dir="auto">{message.content}</p>
             )}
 
             {isStreaming && (

@@ -117,6 +117,15 @@
   line-height: 1.65;
 }
 
+.assistant-response,
+.assistant-response p,
+.assistant-response span,
+.assistant-response em,
+.assistant-response strong,
+.assistant-response blockquote {
+  font-family: 'Vazirmatn', 'Outfit', sans-serif !important;
+}
+
 .markdown-body p {
   margin-bottom: 0.75rem;
 }

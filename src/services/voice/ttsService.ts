@@ -96,6 +96,7 @@ export class TTSService {
         const endpoint = config.fishAudioEndpoint?.trim() || 'https://api.fish.audio/v1/tts';
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
+          'model': config.fishAudioModel || 's2.1-pro-free',
         };
 
         if (config.fishAudioApiKey && config.fishAudioApiKey.trim()) {

@@ -5,7 +5,8 @@ import { RelationshipProgress } from '../../types/relationship';
 import { AnimeCharacterSvg } from './AnimeCharacterSvg';
 import { EmotionalAura } from './EmotionalAura';
 import { AssetImporterModal } from './AssetImporterModal';
-import { Sparkles, Heart, Settings2, Volume2, VolumeX } from 'lucide-react';
+import { VrmAvatarViewer } from './VrmAvatarViewer';
+import { Sparkles, Heart, Settings2, Volume2, VolumeX, Box, Image as ImageIcon } from 'lucide-react';
 
 interface AvatarDisplayProps {
   character: CharacterProfile;
@@ -14,7 +15,7 @@ interface AvatarDisplayProps {
   dominantMood: DominantMood;
   isTalking?: boolean;
   isAudioPlaying?: boolean;
-  onUpdateCharacterAssets: (assets: any) => void;
+  onUpdateCharacterAssets: (updated: Partial<CharacterProfile>) => void;
   onStopAudio?: () => void;
 }
 
@@ -53,6 +54,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
     relationship.stages[0];
 
   const customSprite = character.avatarAssets?.[activeExpression];
+  const modelType = character.modelType || 'svg';
 
   return (
     <div className="relative flex flex-col items-center justify-between h-full w-full p-4 select-none">
@@ -68,11 +70,29 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
           <span className="text-[10px] text-sakura-400 font-mono">({relationship.affinityPoints} pts)</span>
         </div>
 
-        {/* Mood Pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/70 border border-slate-700/50 backdrop-blur-md">
-          <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-xs font-medium text-slate-300">{dominantMood}</span>
-        </div>
+        {/* Model Mode Indicator */}
+        <button
+          onClick={() => setIsAssetModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/60 hover:border-sakura-500/50 backdrop-blur-md transition text-[11px] text-slate-300 shadow-sm"
+          title="مدیریت و تغییر مدل ۲ بعدی یا ۳ بعدی VRM"
+        >
+          {modelType === 'vrm' ? (
+            <>
+              <Box className="w-3 h-3 text-purple-400" />
+              <span className="font-mono text-purple-300">3D VRM</span>
+            </>
+          ) : modelType === '2d_model' ? (
+            <>
+              <ImageIcon className="w-3 h-3 text-sakura-400" />
+              <span className="font-mono text-sakura-300">2D Model</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3 text-sakura-400" />
+              <span className="font-mono text-slate-300">Anime SVG</span>
+            </>
+          )}
+        </button>
 
         {/* Quick Tools */}
         <div className="flex items-center gap-1">
@@ -88,7 +108,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
           <button
             onClick={() => setIsAssetModalOpen(true)}
             className="p-1.5 rounded-full bg-slate-900/70 text-slate-400 border border-slate-700/50 hover:text-white hover:border-sakura-500/30 transition"
-            title="Import custom expression sprites"
+            title="آپلود مدل ۲ بعدی یا فایل .vrm"
           >
             <Settings2 className="w-3.5 h-3.5" />
           </button>
@@ -96,8 +116,30 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
       </div>
 
       {/* Avatar Center Stage */}
-      <div className="relative flex-1 flex items-center justify-center w-full my-2">
-        {customSprite ? (
+      <div className="relative flex-1 flex items-center justify-center w-full my-2 overflow-hidden">
+        {/* Case 1: 3D VRM Model */}
+        {modelType === 'vrm' && character.vrmModelUrl ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <VrmAvatarViewer
+              vrmUrl={character.vrmModelUrl}
+              expression={activeExpression}
+              isTalking={isTalking || isAudioPlaying}
+              className="w-full h-full max-w-[380px]"
+            />
+          </div>
+        ) : modelType === '2d_model' && character.model2dUrl ? (
+          /* Case 2: Full 2D Model */
+          <div className="relative w-72 h-80 flex items-center justify-center overflow-hidden rounded-3xl group">
+            <img
+              src={character.model2dUrl}
+              alt={character.name}
+              className={`w-full h-full object-contain filter drop-shadow-2xl transition-transform duration-300 ${
+                isTalking ? 'scale-105 animate-pulse' : 'hover:scale-102'
+              }`}
+            />
+          </div>
+        ) : customSprite ? (
+          /* Case 3: Expression Sprites */
           <div className="relative w-72 h-80 flex items-center justify-center overflow-hidden rounded-3xl group">
             <img
               src={customSprite}
@@ -108,6 +150,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
             />
           </div>
         ) : (
+          /* Case 4: Default Anime Character SVG */
           <AnimeCharacterSvg
             expression={activeExpression}
             isTalking={isTalking || isAudioPlaying}
@@ -119,13 +162,13 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
       {/* Bottom Info Bar: Character Name & Interactive Expression Bar */}
       <div className="w-full flex flex-col items-center gap-2 z-10">
         <div className="text-center">
-          <h3 className="text-base font-bold text-white tracking-wide flex items-center justify-center gap-1.5">
+          <h3 className="text-base font-bold text-white tracking-wide flex items-center justify-center gap-1.5 font-vazir">
             {character.name}
             {isTalking && (
               <span className="inline-block w-2 h-2 rounded-full bg-sakura-400 animate-ping" />
             )}
           </h3>
-          <p className="text-[11px] text-slate-400 font-normal truncate max-w-[240px]">
+          <p className="text-[11px] text-slate-400 font-normal truncate max-w-[240px] font-vazir">
             {character.personality.split('.')[0]}.
           </p>
         </div>
@@ -152,13 +195,13 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
         </div>
       </div>
 
-      {/* Custom Asset Importer Modal */}
+      {/* Custom Asset & Model Importer Modal */}
       <AssetImporterModal
         character={character}
         isOpen={isAssetModalOpen}
         onClose={() => setIsAssetModalOpen(false)}
-        onSave={(newAssets) => {
-          onUpdateCharacterAssets(newAssets);
+        onSave={(updated) => {
+          onUpdateCharacterAssets(updated);
         }}
       />
     </div>

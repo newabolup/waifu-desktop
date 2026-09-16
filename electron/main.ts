@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Notification, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification, shell, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -128,6 +128,22 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Allow microphone and media capture without blocking
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'notifications') {
+      callback(true);
+      return;
+    }
+    callback(false);
+  });
+
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    if (permission === 'media' || permission === 'notifications') {
+      return true;
+    }
+    return false;
+  });
+
   createWindow();
 
   app.on('activate', () => {

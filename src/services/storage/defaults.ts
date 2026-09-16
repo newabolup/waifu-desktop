@@ -259,12 +259,13 @@ export const DEFAULT_TTS_CONFIG: TTSConfig = {
   pitch: 1.0,
   fishAudioApiKey: '',
   fishAudioModelId: '',
+  fishAudioModel: 's2.1-pro-free',
   fishAudioEndpoint: 'https://api.fish.audio/v1/tts',
   openaiVoice: 'nova',
 };
 
 export const DEFAULT_STT_CONFIG: STTConfig = {
-  engine: 'webspeech',
-  language: 'fa-IR',
+  engine: 'microphone',
+  language: 'fa',
   continuous: false,
 };

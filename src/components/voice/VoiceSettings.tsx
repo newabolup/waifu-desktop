@@ -218,6 +218,24 @@ export const VoiceSettings: React.FC<VoiceSettingsProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-200 mb-1">
+                Fish Audio Model
+              </label>
+              <select
+                value={config.fishAudioModel || 's2.1-pro-free'}
+                onChange={(e) => setConfig({ ...config, fishAudioModel: e.target.value as any })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none"
+              >
+                <option value="s2.1-pro-free">S2.1 Pro Free (رایگان نامحدود - Official Free API)</option>
+                <option value="s2.1-pro">S2.1 Pro (Premium High Throughput)</option>
+                <option value="s2-pro">S2 Pro (Legacy Model)</option>
+              </select>
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                مدل رسمی رایگان S2.1 Pro Free بدون هزینه و با کیفیت بالا از ۸۳ زبان پشتیبانی می‌کند.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-200 mb-1">
                 Fish Audio Model ID / Voice Reference ID (reference_id)
               </label>
               <input
@@ -358,29 +376,42 @@ export const VoiceSettings: React.FC<VoiceSettingsProps> = ({
 
         <div>
           <label className="block text-xs font-bold text-white mb-2">STT Engine</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
               {
-                key: 'webspeech',
-                label: 'Built-in Web Speech API',
-                desc: 'Fast, real-time streaming recognition directly through microphone with zero API keys required',
+                key: 'microphone',
+                label: 'Direct Microphone (Fish Audio / Whisper)',
+                badge: 'Recommended',
+                desc: 'ضبط مستقیم از میکروفن و تبدیل با هوش مصنوعی صوتی Fish Audio یا Whisper',
+              },
+              {
+                key: 'fish_audio_asr',
+                label: 'Fish Audio Transcribe (ASR)',
+                badge: 'Fish Audio',
+                desc: 'تبدیل دقیق گفتار فارسی به متن با استفاده از مدل Transcribe هوش مصنوعی Fish Audio',
               },
               {
                 key: 'whisper_openai',
                 label: 'OpenAI Whisper API',
-                desc: 'Industry-standard transcription accuracy for Persian, English, and multilingual voice',
+                badge: 'Whisper',
+                desc: 'تبدیل صوت از طریق سرورهای مدل OpenAI Whisper',
               },
             ].map((engine) => (
               <button
                 key={engine.key}
                 onClick={() => setStt({ ...stt, engine: engine.key as any })}
                 className={`p-3 rounded-xl border text-left transition ${
-                  stt.engine === engine.key
+                  (stt.engine || 'microphone') === engine.key
                     ? 'bg-emerald-950/40 border-emerald-500/60 shadow-md shadow-emerald-500/10'
                     : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <span className="text-xs font-bold text-slate-100 block mb-1">{engine.label}</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-100">{engine.label}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                    {engine.badge}
+                  </span>
+                </div>
                 <span className="text-[11px] text-slate-400 leading-tight block">{engine.desc}</span>
               </button>
             ))}
@@ -394,16 +425,31 @@ export const VoiceSettings: React.FC<VoiceSettingsProps> = ({
               Recognition Language
             </label>
             <select
-              value={stt.language || 'fa-IR'}
+              value={stt.language || 'fa'}
               onChange={(e) => setStt({ ...stt, language: e.target.value })}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none"
             >
-              <option value="fa-IR">فارسی / Persian (fa-IR)</option>
-              <option value="en-US">English (en-US)</option>
-              <option value="ja-JP">Japanese (ja-JP)</option>
+              <option value="fa">فارسی / Persian (fa)</option>
+              <option value="en">English (en)</option>
+              <option value="ja">Japanese (ja)</option>
               <option value="auto">Auto-detect</option>
             </select>
           </div>
+
+          {(stt.engine === 'fish_audio_asr' || stt.engine === 'microphone') && (
+            <div>
+              <label className="block text-xs font-bold text-slate-200 mb-1">
+                Fish Audio API Key (ASR)
+              </label>
+              <input
+                type="password"
+                value={stt.fishAudioApiKey || ''}
+                onChange={(e) => setStt({ ...stt, fishAudioApiKey: e.target.value })}
+                placeholder="به‌طور خودکار از کلید TTS استفاده می‌شود (یا کلید جداگانه وارد کنید)"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 font-mono focus:border-emerald-500/50 focus:outline-none"
+              />
+            </div>
+          )}
 
           {stt.engine === 'whisper_openai' && (
             <div>
