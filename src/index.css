@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  body, input, textarea, select, button {
+    font-family: 'Outfit', 'Vazirmatn', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  [dir="rtl"], :lang(fa), .font-vazir {
+    font-family: 'Vazirmatn', 'Outfit', sans-serif !important;
+  }
+
   :root {
     --bg-main: #0b0d14;
     --bg-card: rgba(18, 21, 33, 0.75);
@@ -144,6 +152,20 @@
   font-style: italic;
   color: #cbd5e1;
   margin: 0.5rem 0;
+}
+
+/* Third-person narration & roleplay action styling */
+.narration-action {
+  background: rgba(168, 85, 247, 0.12);
+  border-inline-start: 3px solid rgba(192, 132, 252, 0.8);
+  color: #e9d5ff;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.narration-inline {
+  color: #d8b4fe;
+  font-style: italic;
 }
 
 /* Titlebar drag region */

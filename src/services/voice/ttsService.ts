@@ -88,6 +88,61 @@ export class TTSService {
       };
 
       window.speechSynthesis.speak(utterance);
+    } else if (config.engine === 'fish_audio') {
+      try {
+        onStart?.();
+        this.isSpeaking = true;
+
+        const endpoint = config.fishAudioEndpoint?.trim() || 'https://api.fish.audio/v1/tts';
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        if (config.fishAudioApiKey && config.fishAudioApiKey.trim()) {
+          headers['Authorization'] = `Bearer ${config.fishAudioApiKey.trim()}`;
+        }
+
+        const bodyPayload: Record<string, any> = {
+          text: clean,
+          format: 'mp3',
+        };
+
+        if (config.fishAudioModelId && config.fishAudioModelId.trim()) {
+          bodyPayload.reference_id = config.fishAudioModelId.trim();
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(bodyPayload),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(`Fish Audio TTS error (${res.status}): ${errText || res.statusText}`);
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        this.currentAudio = new Audio(url);
+
+        this.currentAudio.onended = () => {
+          this.isSpeaking = false;
+          onEnd?.();
+        };
+
+        this.currentAudio.onerror = (e) => {
+          console.error('Fish Audio playback error:', e);
+          this.isSpeaking = false;
+          onEnd?.();
+        };
+
+        await this.currentAudio.play();
+      } catch (err) {
+        console.error('Fish Audio TTS failure:', err);
+        this.isSpeaking = false;
+        onEnd?.();
+      }
     } else if (config.engine === 'openai') {
       try {
         onStart?.();

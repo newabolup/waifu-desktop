@@ -91,4 +91,24 @@ describe('PromptEngine', () => {
     expect(payload[1].content).toBe('Hello Kizuna!');
     expect(payload[2].role).toBe('assistant');
   });
+
+  it('detects Persian conversation and injects Persian language directive', () => {
+    const result = engine.compileSystemPrompt({
+      character: DEFAULT_CHARACTER,
+      recentMessages: [
+        {
+          id: '1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'سلام کیزونا! امروز چطوری؟',
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+      ],
+    });
+
+    expect(result).toContain('ACTIVE CONVERSATION LANGUAGE: PERSIAN (فارسی)');
+    expect(result).toContain('LANGUAGE CONTINUITY & PERSIAN MATCHING');
+    expect(result).toContain('NARRATION & THIRD-PERSON ACTIONS');
+  });
 });

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ConversationSession } from '../../types/conversation';
 import { CharacterProfile } from '../../types/character';
+import { STTConfig } from '../../types/voice';
 import { ChatMessageItem } from './ChatMessageItem';
 import { ChatInput } from './ChatInput';
 import { ConversationListModal } from './ConversationListModal';
@@ -40,6 +41,7 @@ interface ChatViewProps {
   onClearCurrentChat: () => void;
   onSpeakMessage: (msgId: string, text: string) => void;
   onStopAudio: () => void;
+  sttConfig?: STTConfig;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -68,6 +70,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onClearCurrentChat,
   onSpeakMessage,
   onStopAudio,
+  sttConfig,
 }) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [inChatSearch, setInChatSearch] = useState('');
@@ -233,6 +236,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         onRetryLast={onRetryLast}
         isGenerating={isGenerating}
         characterName={character.name}
+        sttConfig={sttConfig}
       />
 
       {/* Conversation Sessions Modal */}

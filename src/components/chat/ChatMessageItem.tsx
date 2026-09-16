@@ -116,6 +116,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
+              dir="auto"
               className="w-full min-h-[80px] p-2 rounded-lg bg-black/50 border border-sakura-400 text-sm text-white focus:outline-none"
             />
             <div className="flex justify-end gap-2 text-xs">
@@ -134,16 +135,38 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             </div>
           </div>
         ) : (
-          <div className="markdown-body text-sm leading-relaxed overflow-x-auto">
+          <div className="markdown-body text-sm leading-relaxed overflow-x-auto" dir="auto">
             {isAssistant ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}
+                components={{
+                  em: ({ children }) => {
+                    const text = String(children);
+                    const isSingleWord = text.trim().split(/\s+/).length <= 1 && !/[.!؟،,]/.test(text);
+
+                    if (isSingleWord) {
+                      return <em className="narration-inline font-medium not-italic">{children}</em>;
+                    }
+
+                    return (
+                      <span className="narration-action block my-2.5 px-3.5 py-2 rounded-xl text-[0.91rem] shadow-sm select-text leading-relaxed">
+                        <span className="inline-block text-purple-400 text-xs font-semibold me-2 not-italic select-none">✦</span>
+                        {children}
+                      </span>
+                    );
+                  },
+                  p: ({ children }) => (
+                    <p className="mb-2 leading-relaxed" dir="auto">
+                      {children}
+                    </p>
+                  ),
+                }}
               >
                 {message.content}
               </ReactMarkdown>
             ) : (
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words" dir="auto">{message.content}</p>
             )}
 
             {isStreaming && (

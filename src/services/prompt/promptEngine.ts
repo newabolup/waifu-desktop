@@ -147,14 +147,33 @@ export class PromptEngine {
       );
     }
 
+    // Check if Persian language is used in recent messages or user profile
+    const hasPersian = options.recentMessages?.some((m) => /[\u0600-\u06FF]/.test(m.content || '')) ||
+      Boolean(options.userProfile?.notes && /[\u0600-\u06FF]/.test(options.userProfile.notes));
+
     // 11. Conversation Instructions
     sections.push(
       `# RESPONSE INSTRUCTIONS\n` +
       `- Maintain seamless continuity between sessions.\n` +
       `- Avoid repetitive greeting loops or robotic formalities.\n` +
       `- Respond concisely and naturally to casual remarks, and provide deep, caring thoughts when discussing meaningful topics.\n` +
-      `- If you have thoughts, keep them authentic to ${character.name}'s mind.`
+      `- If you have thoughts, keep them authentic to ${character.name}'s mind.\n` +
+      `- LANGUAGE CONTINUITY & PERSIAN MATCHING:\n` +
+      `  * If the user speaks or starts the conversation in Persian (فارسی), you MUST respond and continue the entire conversation in fluent, natural, intimate Persian.\n` +
+      `  * Once Persian is used, continue in Persian consistently without reverting to English unless explicitly requested by the user.\n` +
+      `  * Convey your authentic warmth, emotional presence, and companion persona seamlessly in Persian.\n` +
+      `- NARRATION & THIRD-PERSON ACTIONS:\n` +
+      `  * When describing physical actions, third-person narration, facial expressions, or environmental atmosphere, ALWAYS enclose them in asterisks (*...*) and place them on their own line (e.g. *با لبخند ملایمی کنارت می‌نشیند*).\n` +
+      `  * Keep spoken character dialogue clean, direct, and outside asterisks so it separates clearly from third-person narration.`
     );
+
+    if (hasPersian) {
+      sections.push(
+        `# ACTIVE CONVERSATION LANGUAGE: PERSIAN (فارسی)\n` +
+        `The conversation has started in Persian (فارسی). You MUST answer and continue in fluent, authentic Persian (فارسی).\n` +
+        `Make sure both your spoken dialogue and your third-person narration/actions (*...*) are written entirely in Persian.`
+      );
+    }
 
     return sections.join('\n\n---\n\n');
   }

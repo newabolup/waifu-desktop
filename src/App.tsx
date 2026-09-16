@@ -16,7 +16,9 @@ import {
   DEFAULT_PROACTIVE_RULES,
   DEFAULT_APP_SETTINGS,
   DEFAULT_TTS_CONFIG,
+  DEFAULT_STT_CONFIG,
 } from './services/storage/defaults';
+import { TTSConfig, STTConfig } from './types/voice';
 
 import { promptEngine } from './services/prompt/promptEngine';
 import { providerEngine } from './services/ai/providerEngine';
@@ -68,7 +70,22 @@ export const App: React.FC = () => {
   const [activeProviderId, setActiveProviderId] = useState<string>(DEFAULT_PROVIDERS[0]?.id || 'prov-local');
   const [proactiveRules, setProactiveRules] = useState<ProactiveRule[]>(DEFAULT_PROACTIVE_RULES);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
-  const [ttsConfig, setTtsConfig] = useState<TTSConfig>(DEFAULT_TTS_CONFIG);
+  const [ttsConfig, setTtsConfig] = useState<TTSConfig>(() => {
+    try {
+      const saved = localStorage.getItem('kizuna_tts_config');
+      return saved ? { ...DEFAULT_TTS_CONFIG, ...JSON.parse(saved) } : DEFAULT_TTS_CONFIG;
+    } catch {
+      return DEFAULT_TTS_CONFIG;
+    }
+  });
+  const [sttConfig, setSttConfig] = useState<STTConfig>(() => {
+    try {
+      const saved = localStorage.getItem('kizuna_stt_config');
+      return saved ? { ...DEFAULT_STT_CONFIG, ...JSON.parse(saved) } : DEFAULT_STT_CONFIG;
+    } catch {
+      return DEFAULT_STT_CONFIG;
+    }
+  });
 
   // Live Chat Generation States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -611,6 +628,7 @@ export const App: React.FC = () => {
                   onClearCurrentChat={handleClearCurrentChat}
                   onSpeakMessage={handleSpeakMessage}
                   onStopAudio={handleStopAudio}
+                  sttConfig={sttConfig}
                 />
               </div>
 
@@ -732,8 +750,24 @@ export const App: React.FC = () => {
           {activeTab === 'voice' && (
             <VoiceSettings
               ttsConfig={ttsConfig}
+              sttConfig={sttConfig}
               characterName={activeCharacter.name}
-              onSaveTTSConfig={(cfg) => setTtsConfig(cfg)}
+              onSaveTTSConfig={(cfg) => {
+                setTtsConfig(cfg);
+                try {
+                  localStorage.setItem('kizuna_tts_config', JSON.stringify(cfg));
+                } catch {
+                  // Ignore
+                }
+              }}
+              onSaveSTTConfig={(cfg) => {
+                setSttConfig(cfg);
+                try {
+                  localStorage.setItem('kizuna_stt_config', JSON.stringify(cfg));
+                } catch {
+                  // Ignore
+                }
+              }}
             />
           )}
 

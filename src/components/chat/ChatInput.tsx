@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Square, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { Send, Square, Play, RefreshCw, Mic, MicOff } from 'lucide-react';
+import { sttService } from '../../services/voice/sttService';
+import { STTConfig } from '../../types/voice';
+import { DEFAULT_STT_CONFIG } from '../../services/storage/defaults';
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
@@ -9,6 +12,7 @@ interface ChatInputProps {
   isGenerating: boolean;
   canContinue?: boolean;
   characterName: string;
+  sttConfig?: STTConfig;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -19,8 +23,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isGenerating,
   canContinue = false,
   characterName,
+  sttConfig = DEFAULT_STT_CONFIG,
 }) => {
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -31,6 +38,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [input]);
 
   const handleSend = () => {
+    if (isListening) {
+      sttService.stopListening();
+      setIsListening(false);
+    }
     if (isGenerating) {
       onStopGeneration();
       return;
@@ -49,6 +60,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const toggleListening = async () => {
+    if (isListening) {
+      sttService.stopListening();
+      setIsListening(false);
+      setInterimText('');
+      return;
+    }
+
+    try {
+      await sttService.startListening(sttConfig, {
+        onStart: () => {
+          setIsListening(true);
+        },
+        onInterimResult: (text) => {
+          setInterimText(text);
+        },
+        onFinalResult: (text) => {
+          setInput((prev) => (prev ? `${prev} ${text}` : text));
+          setInterimText('');
+        },
+        onError: (err) => {
+          console.warn('STT Error:', err);
+          setIsListening(false);
+          setInterimText('');
+        },
+        onEnd: () => {
+          setIsListening(false);
+          setInterimText('');
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      setIsListening(false);
     }
   };
 
@@ -79,6 +126,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               Retry last
             </button>
           )}
+          {isListening && (
+            <span className="flex items-center gap-1.5 text-xs text-rose-400 font-medium animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              Listening to your voice... {interimText && <span className="italic text-slate-300">&ldquo;{interimText}&rdquo;</span>}
+            </span>
+          )}
         </div>
 
         {input.length > 0 && (
@@ -89,18 +142,37 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
 
       {/* Input container */}
-      <div className="relative flex items-end gap-2 p-2 rounded-2xl bg-[#141726]/90 border border-slate-800 focus-within:border-sakura-500/50 shadow-xl transition-all">
+      <div className={`relative flex items-end gap-2 p-2 rounded-2xl bg-[#141726]/90 border shadow-xl transition-all ${
+        isListening
+          ? 'border-rose-500/70 shadow-rose-500/10'
+          : 'border-slate-800 focus-within:border-sakura-500/50'
+      }`}>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Message ${characterName}... (Press Enter to send, Shift+Enter for newline)`}
+          dir="auto"
+          placeholder={isListening ? 'Speak now into microphone...' : `Message ${characterName}... (Press Enter to send)`}
           rows={1}
           className="flex-1 max-h-40 p-2 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed select-text"
         />
 
-        <div className="flex items-center gap-1 mb-1">
+        <div className="flex items-center gap-1.5 mb-1">
+          {/* STT Microphone Button */}
+          <button
+            type="button"
+            onClick={toggleListening}
+            className={`p-2.5 rounded-xl transition flex items-center justify-center ${
+              isListening
+                ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
+            }`}
+            title={isListening ? 'Stop recording voice' : 'Speak to companion (Voice Input)'}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
           {isGenerating ? (
             <button
               onClick={onStopGeneration}

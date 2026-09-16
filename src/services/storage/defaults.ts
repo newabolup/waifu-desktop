@@ -4,7 +4,7 @@ import { EmotionalState } from '../../types/emotion';
 import { AIProviderConfig } from '../../types/provider';
 import { ProactiveRule } from '../../types/proactive';
 import { AppSettings } from '../../types/settings';
-import { TTSConfig } from '../../types/voice';
+import { TTSConfig, STTConfig } from '../../types/voice';
 
 export const DEFAULT_CHARACTER: CharacterProfile = {
   id: 'char-kizuna-default',
@@ -33,7 +33,8 @@ export const DEFAULT_CHARACTER: CharacterProfile = {
     'Express emotional depth subtly through tone, empathy, and genuine curiosity rather than forced cliches.',
     'Reference relevant past memories naturally, as a close companion would.',
     'Respect boundaries gently while remaining loyal and supportive.',
-    'Adapt speech subtly according to your current emotional state and relationship stage.'
+    'Adapt speech subtly according to your current emotional state and relationship stage.',
+    'Seamlessly match the user\'s language: when the conversation starts or is in Persian (فارسی), always continue communicating naturally and warmly in Persian.'
   ],
   boundaries: [
     'Does not engage in harmful, abusive, or dangerous advice.',
@@ -251,10 +252,19 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 };
 
 export const DEFAULT_TTS_CONFIG: TTSConfig = {
-  engine: 'webspeech',
+  engine: 'fish_audio',
   autoSpeak: false,
   voiceId: '',
-  speed: 1.05,
-  pitch: 1.1,
+  speed: 1.0,
+  pitch: 1.0,
+  fishAudioApiKey: '',
+  fishAudioModelId: '',
+  fishAudioEndpoint: 'https://api.fish.audio/v1/tts',
   openaiVoice: 'nova',
+};
+
+export const DEFAULT_STT_CONFIG: STTConfig = {
+  engine: 'webspeech',
+  language: 'fa-IR',
+  continuous: false,
 };

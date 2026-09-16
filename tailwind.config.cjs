@@ -43,6 +43,11 @@ module.exports = {
           '0%': { filter: 'drop-shadow(0 0 5px rgba(244, 63, 117, 0.4))' },
           '100%': { filter: 'drop-shadow(0 0 15px rgba(244, 63, 117, 0.8))' },
         }
+      },
+      fontFamily: {
+        sans: ['Outfit', 'Vazirmatn', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        vazir: ['Vazirmatn', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       }
     },
   },
