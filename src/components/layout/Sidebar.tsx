@@ -11,6 +11,7 @@ import {
   Volume2,
   Terminal,
   Settings,
+  Video,
 } from 'lucide-react';
 
 export type ActiveTab =
@@ -30,12 +31,14 @@ interface SidebarProps {
   activeTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
   memoryCount: number;
+  onOpenCall?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   memoryCount,
+  onOpenCall,
 }) => {
   const navItems = [
     { key: 'chat', label: 'Chat', icon: MessageSquare },
@@ -54,6 +57,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="w-16 md:w-56 h-full bg-[#0a0c16] border-r border-slate-800/80 flex flex-col justify-between py-4 select-none z-20 flex-shrink-0">
       <div className="space-y-1 px-2">
+        {onOpenCall && (
+          <div className="mb-2.5">
+            <button
+              onClick={onOpenCall}
+              className="w-full flex items-center justify-center md:justify-start gap-2.5 px-3 py-2.5 rounded-2xl bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-rose-600/25 transition-all group hover:scale-[1.02]"
+              title="تماس تصویری زنده با کاراکتر (Talk-to-Talk Call)"
+            >
+              <Video className="w-4 h-4 flex-shrink-0 text-white group-hover:animate-pulse" />
+              <span className="hidden md:inline font-vazir text-xs">تماس زنده (Talk-to-Talk)</span>
+            </button>
+          </div>
+        )}
+
         {navItems.map((item) => {
           const isActive = activeTab === item.key;
           const Icon = item.icon;

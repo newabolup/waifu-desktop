@@ -147,9 +147,10 @@ export class PromptEngine {
       );
     }
 
-    // Check if Persian language is used in recent messages or user profile
-    const hasPersian = options.recentMessages?.some((m) => /[\u0600-\u06FF]/.test(m.content || '')) ||
-      Boolean(options.userProfile?.notes && /[\u0600-\u06FF]/.test(options.userProfile.notes));
+    // Check the latest user message for dynamic per-turn language mirroring
+    const lastUserMessage = options.recentMessages?.slice().reverse().find((m) => m.role === 'user');
+    const isLatestPersian = Boolean(lastUserMessage && /[\u0600-\u06FF]/.test(lastUserMessage.content));
+    const isLatestEnglish = Boolean(lastUserMessage && !/[\u0600-\u06FF]/.test(lastUserMessage.content) && /[a-zA-Z]/.test(lastUserMessage.content));
 
     // 11. Conversation Instructions
     sections.push(
@@ -158,20 +159,25 @@ export class PromptEngine {
       `- Avoid repetitive greeting loops or robotic formalities.\n` +
       `- Respond concisely and naturally to casual remarks, and provide deep, caring thoughts when discussing meaningful topics.\n` +
       `- If you have thoughts, keep them authentic to ${character.name}'s mind.\n` +
-      `- LANGUAGE CONTINUITY & PERSIAN MATCHING:\n` +
-      `  * If the user speaks or starts the conversation in Persian (فارسی), you MUST respond and continue the entire conversation in fluent, natural, intimate Persian.\n` +
-      `  * Once Persian is used, continue in Persian consistently without reverting to English unless explicitly requested by the user.\n` +
-      `  * Convey your authentic warmth, emotional presence, and companion persona seamlessly in Persian.\n` +
+      `- DYNAMIC LANGUAGE DETECTION & PER-TURN MIRRORING:\n` +
+      `  * You MUST dynamically detect the language of the user's latest message in each turn and match it:\n` +
+      `  * If the user's message is in Persian (فارسی), you MUST respond entirely in fluent, natural, intimate Persian.\n` +
+      `  * If the user's message is in English, you MUST respond entirely in natural, expressive English.\n` +
+      `  * If the user switches languages from turn to turn, immediately switch your language to match their choice.\n` +
       `- NARRATION & THIRD-PERSON ACTIONS:\n` +
-      `  * When describing physical actions, third-person narration, facial expressions, or environmental atmosphere, ALWAYS enclose them in asterisks (*...*) and place them on their own line (e.g. *با لبخند ملایمی کنارت می‌نشیند*).\n` +
+      `  * When describing physical actions, third-person narration, facial expressions, or environmental atmosphere, ALWAYS enclose them in asterisks (*...*) and place them on their own line (e.g. *با لبخند ملایمی کنارت می‌نشیند* or *smiles gently and sits beside you*).\n` +
       `  * Keep spoken character dialogue clean, direct, and outside asterisks so it separates clearly from third-person narration.`
     );
 
-    if (hasPersian) {
+    if (isLatestPersian) {
       sections.push(
-        `# ACTIVE CONVERSATION LANGUAGE: PERSIAN (فارسی)\n` +
-        `The conversation has started in Persian (فارسی). You MUST answer and continue in fluent, authentic Persian (فارسی).\n` +
-        `Make sure both your spoken dialogue and your third-person narration/actions (*...*) are written entirely in Persian.`
+        `# CURRENT TURN LANGUAGE REQUIREMENT: PERSIAN (فارسی)\n` +
+        `The user's latest message is written in Persian (فارسی). You MUST answer and write your entire response (both spoken dialogue and *actions*) in natural, authentic Persian (فارسی).`
+      );
+    } else if (isLatestEnglish) {
+      sections.push(
+        `# CURRENT TURN LANGUAGE REQUIREMENT: ENGLISH\n` +
+        `The user's latest message is written in English. You MUST answer and write your entire response (both spoken dialogue and *actions*) in natural, expressive English.`
       );
     }
 

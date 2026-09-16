@@ -157,7 +157,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               return (
                 <div
                   key={th.key}
-                  onClick={() => setLocalSettings({ ...localSettings, theme: th.key })}
+                  onClick={() => {
+                    const next = { ...localSettings, theme: th.key };
+                    setLocalSettings(next);
+                    document.documentElement.setAttribute('data-theme', th.key);
+                    document.body.classList.remove('theme-dark-sakura', 'theme-midnight-neon', 'theme-cyber-dream', 'theme-light-velvet');
+                    document.body.classList.add(`theme-${th.key}`);
+                    try {
+                      localStorage.setItem('kizuna_theme', th.key);
+                    } catch {}
+                    onSaveSettings(next);
+                  }}
                   className={`p-3.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? 'bg-sakura-950/40 border-sakura-500 shadow-md'

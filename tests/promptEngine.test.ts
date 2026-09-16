@@ -92,8 +92,8 @@ describe('PromptEngine', () => {
     expect(payload[2].role).toBe('assistant');
   });
 
-  it('detects Persian conversation and injects Persian language directive', () => {
-    const result = engine.compileSystemPrompt({
+  it('dynamically mirrors language per-turn for Persian and English', () => {
+    const persianResult = engine.compileSystemPrompt({
       character: DEFAULT_CHARACTER,
       recentMessages: [
         {
@@ -107,8 +107,23 @@ describe('PromptEngine', () => {
       ],
     });
 
-    expect(result).toContain('ACTIVE CONVERSATION LANGUAGE: PERSIAN (فارسی)');
-    expect(result).toContain('LANGUAGE CONTINUITY & PERSIAN MATCHING');
-    expect(result).toContain('NARRATION & THIRD-PERSON ACTIONS');
+    expect(persianResult).toContain('CURRENT TURN LANGUAGE REQUIREMENT: PERSIAN (فارسی)');
+    expect(persianResult).toContain('DYNAMIC LANGUAGE DETECTION & PER-TURN MIRRORING');
+
+    const englishResult = engine.compileSystemPrompt({
+      character: DEFAULT_CHARACTER,
+      recentMessages: [
+        {
+          id: '1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'Hello Kizuna! How are you doing today?',
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+      ],
+    });
+
+    expect(englishResult).toContain('CURRENT TURN LANGUAGE REQUIREMENT: ENGLISH');
   });
 });

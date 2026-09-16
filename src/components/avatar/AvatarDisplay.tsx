@@ -6,7 +6,7 @@ import { AnimeCharacterSvg } from './AnimeCharacterSvg';
 import { EmotionalAura } from './EmotionalAura';
 import { AssetImporterModal } from './AssetImporterModal';
 import { VrmAvatarViewer } from './VrmAvatarViewer';
-import { Sparkles, Heart, Settings2, Volume2, VolumeX, Box, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Heart, Settings2, Volume2, VolumeX, Box, Image as ImageIcon, Video } from 'lucide-react';
 
 interface AvatarDisplayProps {
   character: CharacterProfile;
@@ -17,6 +17,7 @@ interface AvatarDisplayProps {
   isAudioPlaying?: boolean;
   onUpdateCharacterAssets: (updated: Partial<CharacterProfile>) => void;
   onStopAudio?: () => void;
+  onOpenCall?: () => void;
 }
 
 export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
@@ -28,13 +29,14 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   isAudioPlaying = false,
   onUpdateCharacterAssets,
   onStopAudio,
+  onOpenCall,
 }) => {
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [manualExpression, setManualExpression] = useState<AvatarExpression | null>(null);
 
   // Compute active expression
   let activeExpression: AvatarExpression = 'idle';
-  if (isTalking || isAudioPlaying) {
+  if (isAudioPlaying) {
     activeExpression = 'talking';
   } else if (manualExpression) {
     activeExpression = manualExpression;
@@ -95,7 +97,16 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
         </button>
 
         {/* Quick Tools */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {onOpenCall && (
+            <button
+              onClick={onOpenCall}
+              className="p-1.5 rounded-full bg-gradient-to-r from-rose-600 to-purple-600 text-white hover:scale-105 transition shadow-md shadow-rose-600/30"
+              title="برقراری تماس زنده (Talk-to-Talk Call)"
+            >
+              <Video className="w-3.5 h-3.5" />
+            </button>
+          )}
           {isAudioPlaying && (
             <button
               onClick={onStopAudio}

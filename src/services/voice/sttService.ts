@@ -360,10 +360,69 @@ export class STTService {
       }
     }
 
-    // 3. If neither key is configured:
-    callbacks.onError?.(
-      'برای استفاده از تشخیص صوت، لطفاً کلید API Fish Audio یا OpenAI را در بخش تنظیمات صدا وارد کنید.'
-    );
+    // 3. Free STT engine (Zero API keys required! Completely free out of the box)
+    callbacks.onInterimResult?.('در حال پردازش صوت با موتور رایگان...');
+
+    // A. Try Hugging Face Serverless Whisper (Free)
+    try {
+      const hfEndpoints = [
+        'https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo',
+        'https://api-inference.huggingface.co/models/openai/whisper-tiny',
+      ];
+
+      for (const ep of hfEndpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            body: blob,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const text = data.text || '';
+            if (text.trim()) {
+              callbacks.onFinalResult(text.trim());
+              return;
+            }
+          }
+        } catch {
+          // Try next
+        }
+      }
+    } catch (e) {
+      console.warn('Free online Whisper error:', e);
+    }
+
+    // B. Try Local In-Browser / Electron Transformers.js Whisper
+    try {
+      callbacks.onInterimResult?.('در حال اجرای پردازشگر صوتی محلی...');
+      const { pipeline, env } = await import('@xenova/transformers');
+      env.allowLocalModels = false;
+
+      const transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny');
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx({ sampleRate: 16000 });
+        const arrayBuf = await blob.arrayBuffer();
+        const decoded = await audioCtx.decodeAudioData(arrayBuf);
+        const channelData = decoded.getChannelData(0);
+
+        const out: any = await transcriber(channelData, {
+          language: lang === 'fa' ? 'persian' : lang,
+          task: 'transcribe',
+        });
+
+        const text = typeof out === 'string' ? out : out?.text || '';
+        if (text.trim()) {
+          callbacks.onFinalResult(text.trim());
+          return;
+        }
+      }
+    } catch (localErr) {
+      console.warn('Local Transformers.js whisper error:', localErr);
+    }
+
+    callbacks.onError?.('صدا دریافت شد اما پردازشگر آنلاین در دسترس نبود. لطفاً دوباره امتحان کنید.');
   }
 
   /**

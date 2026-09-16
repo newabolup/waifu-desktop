@@ -125,6 +125,51 @@ function createWindow() {
     console.warn('Could not locate sql-wasm.wasm in candidate paths');
     return null;
   });
+
+  // Persistent VRM models storage in userData
+  const modelsDir = path.join(app.getPath('userData'), 'vrm_models');
+  try {
+    if (!fs.existsSync(modelsDir)) {
+      fs.mkdirSync(modelsDir, { recursive: true });
+    }
+  } catch {}
+
+  ipcMain.handle('vrm-save', async (_, { characterId, data }: { characterId: string; data: Uint8Array }) => {
+    try {
+      const target = path.join(modelsDir, `${characterId}.vrm`);
+      fs.writeFileSync(target, Buffer.from(data));
+      return { success: true, path: target };
+    } catch (err: any) {
+      console.error('Failed to save VRM model to disk:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('vrm-load', async (_, { characterId }: { characterId: string }) => {
+    try {
+      const target = path.join(modelsDir, `${characterId}.vrm`);
+      if (fs.existsSync(target)) {
+        const buf = fs.readFileSync(target);
+        return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to load VRM model from disk:', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('vrm-delete', async (_, { characterId }: { characterId: string }) => {
+    try {
+      const target = path.join(modelsDir, `${characterId}.vrm`);
+      if (fs.existsSync(target)) {
+        fs.unlinkSync(target);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 app.whenReady().then(() => {

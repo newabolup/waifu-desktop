@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CharacterProfile, AvatarExpression, CharacterExpressionAssets, AvatarModelType } from '../../types/character';
 import { VrmAvatarViewer } from './VrmAvatarViewer';
-import { X, Upload, Check, Image as ImageIcon, Box, Sparkles, Trash2, Layers, Info } from 'lucide-react';
+import { vrmStorage } from '../../services/storage/vrmStorage';
+import { X, Upload, Check, Image as ImageIcon, Box, Sparkles, Trash2, Layers, Info, Save, Loader2 } from 'lucide-react';
 
 interface AssetImporterModalProps {
   character: CharacterProfile;
@@ -35,6 +36,10 @@ export const AssetImporterModal: React.FC<AssetImporterModalProps> = ({
   const [vrmName, setVrmName] = useState<string>(character.vrmMetadata?.title || '');
   const [vrmAuthor, setVrmAuthor] = useState<string>(character.vrmMetadata?.author || '');
 
+  const [rawVrmFile, setRawVrmFile] = useState<File | null>(null);
+  const [isSavingVrm, setIsSavingVrm] = useState(false);
+  const [vrmSaveMessage, setVrmSaveMessage] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   // Handle 2D model full image upload
@@ -55,10 +60,30 @@ export const AssetImporterModal: React.FC<AssetImporterModalProps> = ({
       alert('لطفاً یک فایل با پسوند .vrm انتخاب کنید.');
       return;
     }
+    setRawVrmFile(file);
     const blobUrl = URL.createObjectURL(file);
     setVrmModelUrl(blobUrl);
     setModelType('vrm');
     setVrmName(file.name.replace(/\.vrm$/i, ''));
+    setVrmSaveMessage(null);
+  };
+
+  const handleSaveVrmToStorage = async () => {
+    if (!rawVrmFile && !vrmModelUrl) return;
+    setIsSavingVrm(true);
+    try {
+      if (rawVrmFile) {
+        const liveUrl = await vrmStorage.saveVRM(character.id, rawVrmFile);
+        setVrmModelUrl(liveUrl);
+      }
+      setVrmSaveMessage('مدل VRM با موفقیت در حافظه دائمی برنامه ذخیره شد!');
+      setTimeout(() => setVrmSaveMessage(null), 4000);
+    } catch (err: any) {
+      console.error('Failed to save VRM:', err);
+      setVrmSaveMessage('خطا در ذخیره مدل VRM: ' + (err.message || 'نامشخص'));
+    } finally {
+      setIsSavingVrm(false);
+    }
   };
 
   // Handle expression sprite upload
@@ -83,13 +108,21 @@ export const AssetImporterModal: React.FC<AssetImporterModalProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    let finalVrmUrl = vrmModelUrl;
+    if (rawVrmFile) {
+      try {
+        finalVrmUrl = await vrmStorage.saveVRM(character.id, rawVrmFile);
+      } catch (e) {
+        console.warn('Auto-save VRM failed in handleSave:', e);
+      }
+    }
     onSave({
       modelType,
       model2dUrl,
-      vrmModelUrl,
+      vrmModelUrl: finalVrmUrl,
       avatarAssets: assets,
-      vrmMetadata: vrmModelUrl
+      vrmMetadata: finalVrmUrl
         ? {
             title: vrmName,
             author: vrmAuthor,
@@ -320,15 +353,44 @@ export const AssetImporterModal: React.FC<AssetImporterModalProps> = ({
                         />
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setVrmModelUrl('');
-                          if (modelType === 'vrm') setModelType('svg');
-                        }}
-                        className="text-xs text-rose-400 hover:text-rose-300"
-                      >
-                        حذف مدل VRM
-                      </button>
+                      <div className="flex flex-col gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleSaveVrmToStorage}
+                          disabled={isSavingVrm}
+                          className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 flex items-center justify-center gap-2 transition"
+                        >
+                          {isSavingVrm ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4 text-purple-200" />
+                          )}
+                          <span>ذخیره دائمی مدل VRM در حافظه برنامه</span>
+                        </button>
+
+                        {vrmSaveMessage && (
+                          <div className={`p-2 rounded-lg text-[11px] text-center font-medium ${
+                            vrmSaveMessage.includes('خطا')
+                              ? 'bg-rose-950/60 text-rose-300 border border-rose-800/40'
+                              : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40'
+                          }`}>
+                            {vrmSaveMessage}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await vrmStorage.deleteVRM(character.id);
+                            setVrmModelUrl('');
+                            setRawVrmFile(null);
+                            if (modelType === 'vrm') setModelType('svg');
+                          }}
+                          className="text-xs text-rose-400 hover:text-rose-300 py-1"
+                        >
+                          حذف مدل VRM
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -27,6 +27,7 @@ import { emotionEngine } from './services/emotion/emotionEngine';
 import { relationshipEngine } from './services/relationship/relationshipEngine';
 import { proactiveScheduler } from './services/proactive/proactiveScheduler';
 import { ttsService } from './services/voice/ttsService';
+import { vrmStorage } from './services/storage/vrmStorage';
 
 import { TitleBar } from './components/layout/TitleBar';
 import { Sidebar, ActiveTab } from './components/layout/Sidebar';
@@ -43,6 +44,7 @@ import { ProactiveSettings } from './components/proactive/ProactiveSettings';
 import { VoiceSettings } from './components/voice/VoiceSettings';
 import { DebugPanel } from './components/debug/DebugPanel';
 import { SettingsView } from './components/settings/SettingsView';
+import { VideoCallModal } from './components/call/VideoCallModal';
 
 const INITIAL_CONVERSATION: ConversationSession = {
   id: 'conv-init',
@@ -93,6 +95,7 @@ export const App: React.FC = () => {
   const [streamingThoughts, setStreamingThoughts] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [activeAudioMessageId, setActiveAudioMessageId] = useState<string | undefined>();
+  const [isCallOpen, setIsCallOpen] = useState(false);
 
   // Diagnostics & Telemetry
   const [lastLatencyMs, setLastLatencyMs] = useState(0);
@@ -110,7 +113,22 @@ export const App: React.FC = () => {
 
       const loadedChars = await storage.getCharacters();
       setCharacters(loadedChars && loadedChars.length > 0 ? loadedChars : [DEFAULT_CHARACTER]);
-      const activeChar = loadedChars.find((c) => c.isActive) || loadedChars[0] || DEFAULT_CHARACTER;
+      let activeChar = loadedChars.find((c) => c.isActive) || loadedChars[0] || DEFAULT_CHARACTER;
+
+      // Auto-load saved VRM model from persistent storage if available
+      try {
+        const savedVrmUrl = await vrmStorage.loadVRM(activeChar.id);
+        if (savedVrmUrl) {
+          activeChar = {
+            ...activeChar,
+            vrmModelUrl: savedVrmUrl,
+            modelType: 'vrm',
+          };
+        }
+      } catch (e) {
+        console.warn('Failed to load persistent VRM on startup:', e);
+      }
+
       setActiveCharacter(activeChar);
 
       const loadedConvs = await storage.getConversations(activeChar?.id);
@@ -239,7 +257,12 @@ export const App: React.FC = () => {
   // Update theme class on root element
   useEffect(() => {
     if (settings?.theme) {
-      document.body.className = `theme-${settings.theme} bg-[var(--bg-main)] text-slate-100 select-none overflow-hidden font-['Outfit',sans-serif]`;
+      document.documentElement.setAttribute('data-theme', settings.theme);
+      document.body.classList.remove('theme-dark-sakura', 'theme-midnight-neon', 'theme-cyber-dream', 'theme-light-velvet');
+      document.body.classList.add(`theme-${settings.theme}`);
+      try {
+        localStorage.setItem('kizuna_theme', settings.theme);
+      } catch {}
     }
   }, [settings?.theme]);
 
@@ -472,6 +495,92 @@ export const App: React.FC = () => {
     setActiveAudioMessageId(undefined);
   };
 
+  // Talk-to-Talk Voice Call Message Handler
+  const handleSendVoiceCallMessage = async (userText: string): Promise<string> => {
+    if (!activeCharacter || !activeConversation || !settings) return '';
+
+    proactiveScheduler.recordUserActivity();
+
+    // 1. Save user voice transcript message
+    const userMsg: ChatMessage = {
+      id: 'msg-' + Math.random().toString(36).substring(2, 9),
+      conversationId: activeConversation.id,
+      role: 'user',
+      content: userText,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await storage.saveMessage(userMsg);
+    setMessages((prev) => [...prev, userMsg]);
+
+    // 2. Retrieve memories
+    const retrieved = await memoryEngine.retrieveRelevantMemories(
+      activeCharacter.id,
+      userText,
+      messages.slice(-3).map((m) => m.content).join(' '),
+      settings.memoryTokenBudget || 800
+    );
+
+    // 3. Compile payload
+    const payload = promptEngine.compilePayload({
+      character: activeCharacter,
+      emotionalState: emotionalState || undefined,
+      relationship: relationship || undefined,
+      memories: retrieved,
+      userProfile: settings.userProfile,
+      recentMessages: [...messages, userMsg],
+      maxRecentMessages: 20,
+    });
+
+    const currentProvider = providers.find((p) => p.id === activeProviderId) || providers[0];
+    if (!currentProvider) return 'خطا: هیچ ارائه‌دهنده‌ای تنظیم نشده است.';
+
+    // 4. Stream response and accumulate text
+    let responseText = '';
+    await new Promise<void>((resolve, reject) => {
+      providerEngine.streamChat(
+        currentProvider,
+        payload,
+        {
+          onChunk: (delta) => {
+            responseText += delta;
+          },
+          onError: (err) => {
+            reject(err);
+          },
+          onComplete: async (fullContent) => {
+            responseText = fullContent;
+            resolve();
+          },
+        }
+      ).catch(reject);
+    });
+
+    // 5. Save assistant response
+    const assistantMsg: ChatMessage = {
+      id: 'msg-' + Math.random().toString(36).substring(2, 9),
+      conversationId: activeConversation.id,
+      role: 'assistant',
+      content: responseText,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await storage.saveMessage(assistantMsg);
+    setMessages((prev) => [...prev, assistantMsg]);
+
+    try {
+      const nextEmotions = emotionEngine.evaluateMessageAffect(responseText, emotionalState, activeCharacter);
+      setEmotionalState(nextEmotions);
+      await storage.saveEmotions(nextEmotions);
+
+      const nextRel = relationshipEngine.processExchange(userText, responseText, relationship);
+      setRelationship(nextRel);
+      await storage.saveRelationship(nextRel);
+    } catch {}
+
+    return responseText;
+  };
+
   // Conversation Session Handlers
   const handleSelectConversation = async (convId: string) => {
     const conv = conversations.find((c) => c.id === convId);
@@ -591,6 +700,7 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           memoryCount={memories.length}
+          onOpenCall={() => setIsCallOpen(true)}
         />
 
         {/* Center Canvas / View Content */}
@@ -639,8 +749,9 @@ export const App: React.FC = () => {
                   emotionalState={emotionalState}
                   relationship={relationship}
                   dominantMood={dominantMood}
-                  isTalking={isGenerating}
+                  isTalking={Boolean(activeAudioMessageId)}
                   isAudioPlaying={Boolean(activeAudioMessageId)}
+                  onOpenCall={() => setIsCallOpen(true)}
                   onUpdateCharacterAssets={async (partial) => {
                     const updated = { ...activeCharacter, ...partial };
                     setActiveCharacter(updated);
@@ -803,6 +914,19 @@ export const App: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Talk-to-Talk Fullscreen Live Video Call Mode */}
+      <VideoCallModal
+        isOpen={isCallOpen}
+        onClose={() => setIsCallOpen(false)}
+        character={activeCharacter}
+        emotionalState={emotionalState}
+        relationship={relationship}
+        dominantMood={dominantMood}
+        ttsConfig={ttsConfig}
+        sttConfig={sttConfig}
+        onSendVoiceMessage={handleSendVoiceCallMessage}
+      />
     </div>
   );
 };

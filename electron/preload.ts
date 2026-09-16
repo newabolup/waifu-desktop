@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadDatabase: () => ipcRenderer.invoke('db-load'),
   loadWasmBinary: () => ipcRenderer.invoke('get-wasm-binary'),
 
+  saveVrmModel: (characterId: string, data: Uint8Array) => ipcRenderer.invoke('vrm-save', { characterId, data }),
+  loadVrmModel: (characterId: string) => ipcRenderer.invoke('vrm-load', { characterId }),
+  deleteVrmModel: (characterId: string) => ipcRenderer.invoke('vrm-delete', { characterId }),
+
   showNotification: (title: string, body: string) => {
     ipcRenderer.send('show-notification', { title, body });
   },
